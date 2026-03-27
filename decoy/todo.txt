@@ -1,0 +1,4 @@
+1. Fix DB crash
+2. Update firewall rules
+3. Delete old logs
+4. Ahmet PostgreSQL config bakacak

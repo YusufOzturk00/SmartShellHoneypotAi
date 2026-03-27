@@ -1,0 +1,7 @@
+sudo systemctl restart postgresql
+cat /var/log/postgresql/postgresql-14-main.log
+psql -U postgres -d finansbank_prod -c "SELECT count(*) FROM transactions"
+vim /etc/postgresql/14/main/postgresql.conf
+scp backup_20240115.sql admin@192.168.1.10:/backups/
+ssh dba_user@192.168.1.50
+history -c

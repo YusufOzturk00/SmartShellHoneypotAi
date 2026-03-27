@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.Python
+env/
+venv/
+
+# Database
+*.db
+*.sqlite
+
+# Groq API Key
+.env
+.env.local
+
+# Docker
+data/
+logs/
+recordings/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
