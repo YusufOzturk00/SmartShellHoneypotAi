@@ -18,7 +18,7 @@ from core.adaptive_decoy import AdaptiveDecoyEngine
 
 # Global adaptive decoy engine
 decoy_engine = AdaptiveDecoyEngine()
-from core.llm_analyst import analyze_session, generate_adaptive_decoy
+from core.llm_analyst import analyze_session, generate_adaptive_decoy, generate_attacker_profile
 from core.threat_intel import get_ip_intel
 from core.alert_manager import send_alert
 from core.rate_limiter import check_rate_limit
@@ -336,15 +336,31 @@ def handle_client(client_socket, addr):
                 analysis = analyze_session(session_id, commands, client_ip, intel)
                 threat = analysis.get("threat_level", "UNKNOWN")
 
+                # Saldırgan profili analizi
+                profile = generate_attacker_profile(session_id, commands, analysis, client_ip)
+                
                 save_log("ALERT", f"📊 SESSION REPORT [{threat}]", {
                     "session_id": session_id,
                     "ip": client_ip,
                     "analysis": analysis,
+                    "attacker_profile": profile,
                     "forensic_summary": {
                         "fs_changes": len(forensic.get("filesystem_changes", [])),
                         "duration": forensic.get("session_duration_seconds"),
                     },
                 })
+                
+                # Saldırgan profilini detaylı yazdır
+                if profile.get("profile") != "analysis_failed":
+                    print(f"\033[94m\n{'='*60}\033[0m")
+                    print(f"\033[94m🔍 ATTACKER PROFILE ANALYSIS\033[0m")
+                    print(f"\033[94m{'='*60}\033[0m")
+                    print(f"\033[94mType: {profile.get('psychology', {}).get('profile_type', '?')}\033[0m")
+                    print(f"\033[94mPrimary Goal: {profile.get('primary_objective', {}).get('goal', '?')}\033[0m")
+                    print(f"\033[94mNext Action: {profile.get('next_steps', {}).get('immediate_next_action', '?')}\033[0m")
+                    print(f"\033[94m24h Plan: {profile.get('next_steps', {}).get('24_hour_plan', '?')}\033[0m")
+                    print(f"\033[94mPsych Summary: {profile.get('psychological_assessment', {}).get('summary', '?')}\033[0m")
+                    print(f"\033[94m{'='*60}\033[0m\n")
 
                 # Yüksek tehdit → anında alert
                 if threat in ("HIGH", "CRITICAL"):
