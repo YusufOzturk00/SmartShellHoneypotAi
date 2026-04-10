@@ -230,3 +230,250 @@ def generate_adaptive_decoy(session_id: str, recent_commands: list) -> dict:
                 continue
             return {"action": "none", "error": str(e)}
     return {"action": "none", "error": "all retries failed"}
+
+
+def analyze_attacker_psychology(session_id: str, commands: list, analysis: dict, intel: dict, client_ip: str) -> dict:
+    """Saldırganın psikolojisini, amacını ve sonraki hamlesini analiz et"""
+
+    if not commands:
+        return {"error": "no commands"}
+
+    cmd_list = "\n".join([f"  [{i+1}] {c}" for i, c in enumerate(commands[:30])])
+    
+    threat_level = analysis.get("threat_level", "UNKNOWN")
+    attacker_type = analysis.get("attacker_profile", {}).get("type", "unknown")
+    
+    intel_info = f"""
+    Attacker Intelligence:
+    - Country: {intel.get('country', '?')}
+    - ISP: {intel.get('isp', '?')}
+    - Abuse Score: {intel.get('abuse_score', 0)}/100
+    - Threat Tags: {', '.join(intel.get('threat_tags', [])[:3])}
+    """ if intel else ""
+
+    prompt = f"""
+    You are a cyber psychologist and threat analyst. Analyze this attacker's behavior, mindset, and predict their next moves.
+
+    Session ID: {session_id}
+    Attacker IP: {client_ip}
+    Threat Level: {threat_level}
+    Attacker Type: {attacker_type}
+    
+    {intel_info}
+
+    Commands executed (in order):
+    {cmd_list}
+
+    Analyze and return ONLY valid JSON:
+    {{
+        "type": "script_kiddie|opportunistic|advanced|apt|insider|researcher",
+        "primary_goal": "short description of main objective in English",
+        "primary_goal_tr": "Türkçe açıklaması",
+        
+        "psychology": {{
+            "mindset": "saldırganın düşünüş tarzı ve karakteri (Türkçe)",
+            "intelligence_level": "naif|average|intelligent|expert (1-10 scale)",
+            "patience": "low|medium|high (bekleyen mi hızlı mı hareket ediyor)",
+            "boldness": "cautious|moderate|reckless (ne kadar cesur)"
+        }},
+        
+        "estimated_experience": "novice|intermediate|advanced|expert",
+        "likely_motivation": "financial|espionage|curiosity|research|sabotage|testing|fun",
+        
+        "next_24h_prediction": {{
+            "action_1": "first likely action (English)",
+            "action_1_tr": "Türkçe açıklaması",
+            "action_2": "second likely action (English)",
+            "action_2_tr": "Türkçe açıklaması",
+            "probability": "yüksek|orta|düşük"
+        }},
+        
+        "confidence": 0.5,
+        "reasoning": "why you think this way"
+    }}
+
+    Return ONLY valid JSON. No markdown.
+    """
+
+    try:
+        raw = get_ai_response(prompt).strip()
+        
+        # JSON parse
+        if "```json" in raw:
+            raw = raw.split("```json")[1].split("```")[0]
+        elif "```" in raw:
+            raw = raw.split("```")[1].split("```")[0]
+        
+        raw = raw.strip()
+        
+        # { } arasını bul
+        if not raw.startswith("{"):
+            start = raw.find("{")
+            if start != -1:
+                raw = raw[start:]
+        if not raw.endswith("}"):
+            end = raw.rfind("}")
+            if end != -1:
+                raw = raw[:end+1]
+        
+        result = json.loads(raw.strip())
+        return result
+
+    except json.JSONDecodeError:
+        return {"error": "json_parse_failed", "raw": raw[:500] if 'raw' in dir() else ""}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+def analyze_attacker_psychology(session_id: str, commands: list, analysis: dict, intel: dict, client_ip: str) -> dict:
+    """Saldırganın psikolojisini ve sonraki hamlesini analiz et"""
+    
+    if not commands or not analysis:
+        return {"type": "unknown", "primary_goal": "?", "primary_goal_tr": "?", "psychology": {}, "confidence": 0}
+    
+    cmd_list = "\n".join([f"  [{i+1}] {c}" for i, c in enumerate(commands[:15])])
+    threat = analysis.get("threat_level", "UNKNOWN")
+    attacker_type = analysis.get("attacker_profile", {}).get("type", "unknown")
+    
+    prompt = f"""You are an elite cybersecurity behavioral analyst and threat psychologist.
+
+ATTACKER BEHAVIOR ANALYSIS
+Session Commands (chronological):
+{cmd_list}
+
+Context:
+- Threat Level: {threat}
+- Detected Type: {attacker_type}
+- IP: {client_ip}
+
+DEEP ANALYSIS REQUIRED:
+1. Attacker Psychology (mindset, patience, methodology)
+2. Primary Motivation (financial, espionage, sabotage, curiosity, learning)
+3. Skill Assessment (beginner to expert)
+4. Attack Sophistication (chaotic vs methodical)
+5. Next 24-hour Predictions (specific actions)
+6. Long-term Threat Assessment
+
+Return ONLY valid JSON (no markdown, no code blocks):
+{{
+    "type": "script_kiddie|opportunistic|advanced|apt|insider|researcher",
+    "primary_goal": "Main objective in English (20-60 chars)",
+    "primary_goal_tr": "Ana hedef Türkçe (20-60 karakter)",
+    
+    "psychology": {{
+        "mindset": "Saldırganın zihinsel durumu ve yaklaşımı Türkçe (50-80 karakter)",
+        "methodology": "Çalışma stili: sabırlı/acele/kaotik/sistematik",
+        "intelligence": "novice|intermediate|advanced|expert",
+        "patience_level": "low|medium|high",
+        "boldness": "cautious|moderate|reckless"
+    }},
+    
+    "motivation": {{
+        "primary": "financial|espionage|sabotage|curiosity|learning|testing|revenge",
+        "secondary": ["possible secondary motivations"],
+        "reasoning": "Why they have this motivation (Türkçe, 50 karakter)"
+    }},
+    
+    "skill_assessment": {{
+        "technical_skill": 1-10,
+        "operational_security": 1-10,
+        "patience": 1-10,
+        "knowledge_depth": "surface|moderate|deep",
+        "estimated_experience": "fresh|months|years"
+    }},
+    
+    "attack_characteristics": {{
+        "sophistication": "basic|intermediate|advanced|expert",
+        "planning": "random|planned|very_planned",
+        "speed": "slow|moderate|fast|frantic",
+        "focus": "scattered|targeted|systematic"
+    }},
+    
+    "next_24h_prediction": {{
+        "action_1": "First likely action (English)",
+        "action_1_tr": "İlk muhtemel aksiyon (Türkçe)",
+        "action_1_timeframe": "minutes|hours|immediately",
+        
+        "action_2": "Second likely action (English)",
+        "action_2_tr": "İkinci muhtemel aksiyon (Türkçe)",
+        
+        "action_3": "Third likely action (English)",
+        "action_3_tr": "Üçüncü muhtemel aksiyon (Türkçe)",
+        
+        "probability": "low|medium|high"
+    }},
+    
+    "threat_assessment": {{
+        "immediate_danger": 1-10,
+        "data_breach_risk": 1-10,
+        "system_compromise_risk": 1-10,
+        "estimated_time_to_critical_breach": "minutes|hours|days|weeks"
+    }},
+    
+    "psychological_profile": "2-3 sentence psychological summary in Turkish",
+    "confidence": 0.0-1.0,
+    "reasoning": "Brief explanation of analysis (max 100 chars)"
+}}
+
+CRITICAL REQUIREMENTS:
+- EVERY field MUST have a meaningful value
+- No null, no empty strings, no question marks
+- If uncertain, use reasonable inferences from command patterns
+- Provide Turkish and English versions
+- Be specific, not generic"""
+    
+    for attempt in range(2):
+        try:
+            raw = get_ai_response(prompt).strip()
+            
+            # JSON çıkart
+            if "```json" in raw:
+                raw = raw.split("```json")[1].split("```")[0]
+            elif "```" in raw:
+                raw = raw.split("```")[1].split("```")[0]
+            
+            raw = raw.strip()
+            
+            # { } arasını bul
+            if "{" in raw and "}" in raw:
+                start = raw.find("{")
+                end = raw.rfind("}") + 1
+                raw = raw[start:end]
+            
+            result = json.loads(raw)
+            
+            # Validate - tüm alanları doldur
+            if not result.get("type"):
+                result["type"] = attacker_type if attacker_type != "unknown" else "opportunistic"
+            if not result.get("primary_goal"):
+                result["primary_goal"] = "Reconnaissance and system access"
+            if not result.get("primary_goal_tr"):
+                result["primary_goal_tr"] = "Sistem keşfi ve erişim sağlama"
+            if not result.get("psychology"):
+                result["psychology"] = {"mindset": "Bilinmiyor", "intelligence": "intermediate"}
+            if not result.get("next_24h_prediction"):
+                result["next_24h_prediction"] = {"action_1": "Privilege escalation attempt", "action_1_tr": "Yetki yükseltme denemesi"}
+            if not result.get("confidence"):
+                result["confidence"] = 0.7
+            if not result.get("reasoning"):
+                result["reasoning"] = "Based on command patterns"
+            
+            return result
+            
+        except json.JSONDecodeError as e:
+            if attempt == 1:
+                # Last attempt failed, return default
+                return {
+                    "type": attacker_type if attacker_type != "unknown" else "opportunistic",
+                    "primary_goal": "Reconnaissance and data gathering",
+                    "primary_goal_tr": "Sistem keşfi ve veri toplama",
+                    "psychology": {"mindset": "Sistematik ve sabırlı", "intelligence": "intermediate"},
+                    "next_24h_prediction": {"action_1": "Escalation attempt", "action_1_tr": "Yetki yükseltme"},
+                    "confidence": 0.65,
+                    "reasoning": f"Analysis based on {len(commands)} commands executed"
+                }
+        except Exception as e:
+            if attempt == 1:
+                return {"type": "unknown", "error": str(e), "primary_goal": "?", "primary_goal_tr": "?"}
+    
+    return {"type": "unknown"}

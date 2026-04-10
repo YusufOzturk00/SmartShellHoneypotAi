@@ -18,7 +18,7 @@ from core.adaptive_decoy import AdaptiveDecoyEngine
 
 # Global adaptive decoy engine
 decoy_engine = AdaptiveDecoyEngine()
-from core.llm_analyst import analyze_session, generate_adaptive_decoy, generate_attacker_profile
+from core.llm_analyst import analyze_session, generate_adaptive_decoy, analyze_attacker_psychology
 from core.threat_intel import get_ip_intel
 from core.alert_manager import send_alert
 from core.rate_limiter import check_rate_limit
@@ -336,31 +336,111 @@ def handle_client(client_socket, addr):
                 analysis = analyze_session(session_id, commands, client_ip, intel)
                 threat = analysis.get("threat_level", "UNKNOWN")
 
-                # Saldırgan profili analizi
-                profile = generate_attacker_profile(session_id, commands, analysis, client_ip)
+                # Saldırganın psikolojisini, amacını, sonraki hamlesini analiz et
+                attacker_profile = analyze_attacker_psychology(session_id, commands, analysis, intel, client_ip)
                 
-                save_log("ALERT", f"📊 SESSION REPORT [{threat}]", {
+                # Profili logla
+                save_log("ALERT", f"🧠 ATTACKER PROFILE ANALYSIS", {
                     "session_id": session_id,
                     "ip": client_ip,
-                    "analysis": analysis,
-                    "attacker_profile": profile,
-                    "forensic_summary": {
-                        "fs_changes": len(forensic.get("filesystem_changes", [])),
-                        "duration": forensic.get("session_duration_seconds"),
-                    },
+                    "profile": attacker_profile,
                 })
                 
-                # Saldırgan profilini detaylı yazdır
-                if profile.get("profile") != "analysis_failed":
-                    print(f"\033[94m\n{'='*60}\033[0m")
-                    print(f"\033[94m🔍 ATTACKER PROFILE ANALYSIS\033[0m")
-                    print(f"\033[94m{'='*60}\033[0m")
-                    print(f"\033[94mType: {profile.get('psychology', {}).get('profile_type', '?')}\033[0m")
-                    print(f"\033[94mPrimary Goal: {profile.get('primary_objective', {}).get('goal', '?')}\033[0m")
-                    print(f"\033[94mNext Action: {profile.get('next_steps', {}).get('immediate_next_action', '?')}\033[0m")
-                    print(f"\033[94m24h Plan: {profile.get('next_steps', {}).get('24_hour_plan', '?')}\033[0m")
-                    print(f"\033[94mPsych Summary: {profile.get('psychological_assessment', {}).get('summary', '?')}\033[0m")
-                    print(f"\033[94m{'='*60}\033[0m\n")
+                # Terminal'de DETAYLI format ile yazdır
+                if attacker_profile.get("type") and attacker_profile.get("type") != "unknown":
+                    print(f"\033[96m")
+                    print(f"╔{'═'*76}╗")
+                    print(f"║  🧠 ATTACKER PROFILE ANALYSIS - DEEP DIVE{' '*31}║")
+                    print(f"╠{'═'*76}╣")
+                    
+                    # Temel bilgiler
+                    print(f"║  Type: {attacker_profile.get('type', '?'):68} ║")
+                    print(f"║  Goal: {attacker_profile.get('primary_goal', '?')[:66]:66} ║")
+                    print(f"║  Amacı: {attacker_profile.get('primary_goal_tr', '?')[:65]:65} ║")
+                    
+                    # Psikoloji
+                    psych = attacker_profile.get('psychology', {})
+                    if psych:
+                        print(f"║  {'─'*72} ║")
+                        print(f"║  🧠 PSYCHOLOGY & MINDSET{' '*51} ║")
+                        print(f"║  Zihinsel Durumu: {psych.get('mindset', '?')[:55]:55} ║")
+                        print(f"║  Yöntem: {psych.get('methodology', '?')[:62]:62} ║")
+                        print(f"║  Teknik Seviye: {psych.get('intelligence', '?')[:55]:55} ║")
+                        print(f"║  Sabır: {psych.get('patience_level', '?')[:62]:62} ║")
+                        print(f"║  Cesaret: {psych.get('boldness', '?')[:60]:60} ║")
+                    
+                    # Motivasyon
+                    motivation = attacker_profile.get('motivation', {})
+                    if motivation:
+                        print(f"║  {'─'*72} ║")
+                        print(f"║  🎯 MOTIVATION{' '*59} ║")
+                        print(f"║  Başlıca: {motivation.get('primary', '?')[:61]:61} ║")
+                        secondary = motivation.get('secondary', [])
+                        if secondary and isinstance(secondary, list):
+                            print(f"║  İkincil: {', '.join(secondary[:3])[:58]:58} ║")
+                        print(f"║  Sebep: {motivation.get('reasoning', '?')[:62]:62} ║")
+                    
+                    # Teknik Değerlendirme
+                    skill = attacker_profile.get('skill_assessment', {})
+                    if skill:
+                        print(f"║  {'─'*72} ║")
+                        print(f"║  ⚡ SKILL ASSESSMENT{' '*53} ║")
+                        print(f"║  Teknik Beceri: {skill.get('technical_skill', '?')}/10 | OpSec: {skill.get('operational_security', '?')}/10{' '*20} ║")
+                        print(f"║  Bilgi Derinliği: {skill.get('knowledge_depth', '?')[:48]:48} ║")
+                        print(f"║  Tecrübe: {skill.get('estimated_experience', '?')[:57]:57} ║")
+                    
+                    # Saldırı Karakteristikleri
+                    attack = attacker_profile.get('attack_characteristics', {})
+                    if attack:
+                        print(f"║  {'─'*72} ║")
+                        print(f"║  🔴 ATTACK CHARACTERISTICS{' '*47} ║")
+                        print(f"║  Karmaşıklık: {attack.get('sophistication', '?')[:54]:54} ║")
+                        print(f"║  Planlama: {attack.get('planning', '?')[:57]:57} ║")
+                        print(f"║  Hız: {attack.get('speed', '?')[:64]:64} ║")
+                        print(f"║  Odak: {attack.get('focus', '?')[:62]:62} ║")
+                    
+                    # Sonraki 24 Saat
+                    next_24h = attacker_profile.get('next_24h_prediction', {})
+                    if next_24h:
+                        print(f"║  {'─'*72} ║")
+                        print(f"║  ⏰ NEXT 24-HOUR PREDICTIONS{' '*45} ║")
+                        print(f"║  1. {next_24h.get('action_1', '?')[:70]:70} ║")
+                        print(f"║     └─ {next_24h.get('action_1_tr', '?')[:64]:64} ║")
+                        print(f"║  2. {next_24h.get('action_2', '?')[:70]:70} ║")
+                        print(f"║     └─ {next_24h.get('action_2_tr', '?')[:64]:64} ║")
+                        if next_24h.get('action_3'):
+                            print(f"║  3. {next_24h.get('action_3', '?')[:70]:70} ║")
+                            print(f"║     └─ {next_24h.get('action_3_tr', '?')[:64]:64} ║")
+                    
+                    # Tehdit Değerlendirmesi
+                    threat_assess = attacker_profile.get('threat_assessment', {})
+                    if threat_assess:
+                        print(f"║  {'─'*72} ║")
+                        print(f"║  ⚠️  THREAT ASSESSMENT{' '*52} ║")
+                        print(f"║  Anlık Tehdit: {threat_assess.get('immediate_danger', '?')}/10 | Veri İhlali: {threat_assess.get('data_breach_risk', '?')}/10{' '*15} ║")
+                        print(f"║  Sistem Tehlikesi: {threat_assess.get('system_compromise_risk', '?')}/10{' '*43} ║")
+                        print(f"║  İhlal Zamanı: {threat_assess.get('estimated_time_to_critical_breach', '?')[:50]:50} ║")
+                    
+                    # Özet
+                    print(f"║  {'─'*72} ║")
+                    print(f"║  📋 PSYCHOLOGICAL PROFILE SUMMARY{' '*40} ║")
+                    psych_summary = attacker_profile.get('psychological_profile', '?')
+                    if len(psych_summary) > 70:
+                        print(f"║  {psych_summary[:70]:70} ║")
+                        print(f"║  {psych_summary[70:140]:70} ║")
+                    else:
+                        print(f"║  {psych_summary[:70]:70} ║")
+                    
+                    # Güven seviyesi
+                    print(f"║  {'─'*72} ║")
+                    conf = attacker_profile.get('confidence', 0)
+                    conf_bar = '█' * int(conf * 20) + '░' * (20 - int(conf * 20))
+                    print(f"║  Confidence: {conf_bar} {conf:.2f}/1.0{' '*30} ║")
+                    print(f"║  Reasoning: {attacker_profile.get('reasoning', '?')[:56]:56} ║")
+                    
+                    print(f"╚{'═'*76}╝")
+                    print(f"\033[0m")
+                
 
                 # Yüksek tehdit → anında alert
                 if threat in ("HIGH", "CRITICAL"):
